@@ -1,4 +1,7 @@
 train/
 unsorted_images/
+test/
 .idea/
 *.png
+*.h5
+predictions.csv
