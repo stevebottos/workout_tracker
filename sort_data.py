@@ -1,11 +1,11 @@
 import cv2
 import os
 
-input_folder = "unsorted_images/"
+input_folder= "unsorted_images/"
+
 out_class1 = "train/class1/"  # This class represents the "top" position of a pushup
 out_class2 = "train/class2/"  # This class represents the "bottom" position of a pushup
 out_class3 = "train/class3/"  # This class represents anything that doesn't fit in the other two categories
-
 
 for f in os.listdir(input_folder):
     im = cv2.imread(input_folder + f)
