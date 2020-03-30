@@ -7,11 +7,11 @@ from sklearn.utils import class_weight
 
 ### MODES:
 train_model = 0
-get_predictions_from_frames = 1
-test_model_from_frames = 0
+get_predictions_from_frames = 0
+test_model_from_frames = 1
 
 ### A parameter to tweak
-IMSIZE = (120, 120)
+IMSIZE = (140, 140)
 
 def makeDatasetInMemory(class_folders,
                         in_path,
@@ -32,6 +32,7 @@ def makeDatasetInMemory(class_folders,
 
         images = np.array(images)
         labels = np.array(labels)
+
     else:
         images = []
         for f in os.listdir(in_path):
@@ -92,7 +93,7 @@ if train_model:
     class_weights = class_weight.compute_sample_weight('balanced', train_labels)
 
     model = modelInit()
-    model.fit(train_images, train_labels, epochs=4, class_weight = class_weights)
+    model.fit(train_images, train_labels, epochs=5, class_weight = class_weights)
     model.save('cnn_1.h5')
 
 if get_predictions_from_frames:
@@ -119,7 +120,7 @@ if test_model_from_frames:
 
         im = cv2.imread(test_dir + f, 0)
         im = pipelineSingleSample(im, IMSIZE)
-        cv2.putText(im, 'OpenCV', (10, 500), font, 4, (255, 255, 255), 2, cv2.LINE_AA)
+        # cv2.putText(im, 'OpenCV', (10, 500), font, 4, (255, 255, 255), 2, cv2.LINE_AA)
 
         predictions = m.predict(im)
         print(predictions)
