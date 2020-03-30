@@ -6,9 +6,9 @@ from sklearn.utils import class_weight
 
 
 ### MODES:
-train_model = 0
+train_model = 1
 get_predictions_from_frames = 0
-test_model_from_frames = 1
+test_model_from_frames = 0
 
 ### A parameter to tweak
 IMSIZE = (140, 140)
