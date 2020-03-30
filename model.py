@@ -6,12 +6,12 @@ from sklearn.utils import class_weight
 
 
 ### MODES:
-train_model = 1
-get_predictions_from_frames = 0
+train_model = 0
+get_predictions_from_frames = 1
 test_model_from_frames = 0
 
 ### A parameter to tweak
-IMSIZE = (80, 80)
+IMSIZE = (120, 120)
 
 def makeDatasetInMemory(class_folders,
                         in_path,
@@ -34,8 +34,8 @@ def makeDatasetInMemory(class_folders,
         labels = np.array(labels)
     else:
         images = []
-        for f in os.listdir(in_path + c):
-            im = cv2.imread(in_path + c + f, 0)
+        for f in os.listdir(in_path):
+            im = cv2.imread(in_path + f, 0)
             im = cv2.resize(im, IMSIZE)
             images.append(im)
 
@@ -73,6 +73,9 @@ def pipeline(dataset, IMSIZE=IMSIZE):
     return dataset
 
 def pipelineSingleSample(i, IMSIZE=IMSIZE):
+    print(i)
+    i = cv2.resize(i, IMSIZE)
+    print("test")
     i = i / 255  # Normalize
     i = i.reshape(1, IMSIZE[0], IMSIZE[1], 1)
 
@@ -115,9 +118,9 @@ if test_model_from_frames:
     for f in os.listdir(test_dir):
 
         im = cv2.imread(test_dir + f, 0)
-        im = cv2.resize(im, (220, 220))
-        im = pipelineSingleSample(im)
-        print(im.shape)
+        im = pipelineSingleSample(im, IMSIZE)
+        cv2.putText(im, 'OpenCV', (10, 500), font, 4, (255, 255, 255), 2, cv2.LINE_AA)
+
         predictions = m.predict(im)
         print(predictions)
         # print(test_dir + f)
