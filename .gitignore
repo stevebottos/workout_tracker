@@ -5,3 +5,4 @@ test/
 *.png
 *.h5
 predictions.csv
+.DS_Store/
