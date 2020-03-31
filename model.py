@@ -113,16 +113,16 @@ if train_model:
     train_images = pipeline(train_images)
 
     # Since it's random keep the top bit for training
-    n = int(len(train_labels)*0.3)
-    val_images = train_images[:n]
-    val_labels = train_labels[:n]
+
+    # n = int(len(train_labels)*0.3)
+    # val_images = train_images[:n]
+    # val_labels = train_labels[:n]
 
 
     class_weights = class_weight.compute_sample_weight('balanced', train_labels)
 
     model = modelInit()
-    model.fit(train_images, train_labels, epochs=epochs, class_weight = class_weights,
-              validation_data=(val_images, val_labels))
+    model.fit(train_images, train_labels, epochs=epochs, class_weight = class_weights)#, validation_data=(val_images, val_labels))
     model.save('cnn_1.h5')
 
 if get_predictions_from_frames:
@@ -145,37 +145,56 @@ if test_model_from_frames:
     print("Model loaded")
     test_dir = "test/raw_images/"
 
-    images = simulateVideo("test/raw_images/")
+    counter = 0
+    state = ""
+    annotation = ""
+    for f in os.listdir(test_dir):
 
-    for im_color in images:
-        st2 = time.time()
+        st1 = time.time()
+        im_color = cv2.imread(test_dir + f)
         im = cv2.cvtColor(im_color, cv2.COLOR_BGR2GRAY)
         im = pipelineSingleSample(im, IMSIZE)
+        print(time.time() - st1, "\n\n")
+        st2 = time.time()
         predictions = m.predict(im)
-        class_pred = str(np.argmax(predictions) + 1)
-        im_color = cv2.putText(im_color, "class: " + class_pred, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.imshow("", im_color)
-        cv2.waitKey(32)
+        print(predictions)
+        top = predictions[:,0]
+        bottom = predictions[:,1]
+
+        thresh = 0.5
+
+        if top > thresh and bottom > thresh:
+            current = ""
+        elif top > thresh:
+            current = "T"
+            annotation = "Top of movement"
+        elif bottom > thresh:
+            current = "B"
+            annotation = "Bottom of movement"
+        else:
+            current = ""
+            annotation = "Transitioning"
+
+        if (state == "B" or state == "TB") and current == "T":
+            state = "T"
+            counter += 1
+        else:
+            state += current if current not in state else ""
+
+
 
         print(time.time() - st2)
+        class_pred = str(np.argmax(predictions) + 1)
 
 
-    # for f in os.listdir(test_dir):
-    #
-    #     st1 = time.time()
-    #     im_color = cv2.imread(test_dir + f)
-    #     im = cv2.cvtColor(im_color, cv2.COLOR_BGR2GRAY)
-    #     im = pipelineSingleSample(im, IMSIZE)
-    #     print(time.time() - st1, "\n\n")
-    #     st2 = time.time()
-    #     predictions = m.predict(im)
-    #     print(time.time() - st2)
-    #     class_pred = str(np.argmax(predictions) + 1)
-    #
-    #
-    #     im_color = cv2.putText(im_color, "class: " + class_pred, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    #
-    #     cv2.imshow("", im_color)
-    #     cv2.waitKey(32)
+        im_color = cv2.putText(im_color, "CNN Prediction: " + annotation, (10, 30),
+                               cv2.FONT_HERSHEY_SIMPLEX, 1,
+                               (0, 255, 0), 2)
+        im_color = cv2.putText(im_color, "Pushups completed: " + str(counter), (10, 60),
+                               cv2.FONT_HERSHEY_SIMPLEX, 1,
+                               (0, 255, 0), 2)
+
+        cv2.imshow("", im_color)
+        cv2.waitKey(32)
 
 
