@@ -186,15 +186,28 @@ if test_model_from_frames:
         print(time.time() - st2)
         class_pred = str(np.argmax(predictions) + 1)
 
+        im_color = cv2.resize(im_color, (640*2, 480*2), interpolation = cv2.INTER_AREA)
 
-        im_color = cv2.putText(im_color, "CNN Prediction: " + annotation, (10, 30),
-                               cv2.FONT_HERSHEY_SIMPLEX, 1,
-                               (0, 255, 0), 2)
-        im_color = cv2.putText(im_color, "Pushups completed: " + str(counter), (10, 60),
-                               cv2.FONT_HERSHEY_SIMPLEX, 1,
-                               (0, 255, 0), 2)
+        im_color = cv2.putText(im_color, "CNN Prediction: " + annotation, (10, 70),
+                               cv2.FONT_HERSHEY_SIMPLEX, 2,
+                               (255, 255, 255), thickness = 10)
+
+        im_color = cv2.putText(im_color, "CNN Prediction: " + annotation, (10, 70),
+                               cv2.FONT_HERSHEY_SIMPLEX, 2,
+                               (0, 0, 255), thickness = 3)
+
+        im_color = cv2.putText(im_color, "Pushups completed: " + str(counter), (10, 170),
+                               cv2.FONT_HERSHEY_SIMPLEX, 3,
+                               (255, 255, 255), thickness=10)
+
+        im_color = cv2.putText(im_color, "Pushups completed: " + str(counter), (10, 170),
+                               cv2.FONT_HERSHEY_SIMPLEX, 3,
+                               (0, 0, 255), 3)
+
 
         cv2.imshow("", im_color)
+        cv2.moveWindow("", 20, 20);
+
         cv2.waitKey(32)
 
 
