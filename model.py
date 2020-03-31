@@ -163,6 +163,7 @@ if test_model_from_frames:
 
         thresh = 0.5
 
+        # State logic 
         if top > thresh and bottom > thresh:
             current = ""
         elif top > thresh:
@@ -181,8 +182,7 @@ if test_model_from_frames:
         else:
             state += current if current not in state else ""
 
-
-
+        # Format img
         print(time.time() - st2)
         class_pred = str(np.argmax(predictions) + 1)
 
