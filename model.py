@@ -3,12 +3,13 @@ import cv2
 import os
 from tensorflow.keras import layers, models, callbacks
 from sklearn.utils import class_weight
+import time
 
 
 ### MODES:
-train_model = 1
+train_model = 0
 get_predictions_from_frames = 0
-test_model_from_frames = 0
+test_model_from_frames = 1
 
 ### A parameter to tweak
 IMSIZE = (140, 140)
@@ -74,9 +75,7 @@ def pipeline(dataset, IMSIZE=IMSIZE):
     return dataset
 
 def pipelineSingleSample(i, IMSIZE=IMSIZE):
-    print(i)
     i = cv2.resize(i, IMSIZE)
-    print("test")
     i = i / 255  # Normalize
     i = i.reshape(1, IMSIZE[0], IMSIZE[1], 1)
 
@@ -118,32 +117,19 @@ if test_model_from_frames:
 
     for f in os.listdir(test_dir):
 
+        st1 = time.time()
+        im_color = cv2.imread(test_dir + f)
         im = cv2.imread(test_dir + f, 0)
         im = pipelineSingleSample(im, IMSIZE)
-        # cv2.putText(im, 'OpenCV', (10, 500), font, 4, (255, 255, 255), 2, cv2.LINE_AA)
-
+        st2 = time.time()
         predictions = m.predict(im)
-        print(predictions)
-        # print(test_dir + f)
+        print(time.time() - st2)
+        class_pred = str(np.argmax(predictions) + 1)
 
 
+        im_color = cv2.putText(im_color, "class: " + class_pred, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
+        cv2.imshow("", im_color)
+        cv2.waitKey(32)
+        print(time.time() - st1, "\n\n")
 
-    #     im = cv2.imread(test_dir + f, 0)
-
-    # cv2.putText(img, 'OpenCV', (10, 500), font, 4, (255, 255, 255), 2, cv2.LINE_AA)
-
-
-    #     im = cv2.resize(im, (220, 220))
-    #     test_images.append(im)
-    #
-    #     # if cnt == lim:
-    #     #     break
-    #     cnt += 1
-    #
-    # test_images = pipeline(test_images)
-    #
-    # predictions = m.predict(test_images)
-    # print(predictions)
-    # # predictions = np.argmax(predictions, 1).T
-    # np.savetxt('predictions.csv', predictions, delimiter=',')
