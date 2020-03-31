@@ -12,7 +12,7 @@ get_predictions_from_frames = 0
 test_model_from_frames = 1
 
 ### A parameter to tweak
-IMSIZE = (140, 140)
+IMSIZE = (128, 128)
 
 def makeDatasetInMemory(class_folders,
                         in_path,
