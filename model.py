@@ -4,7 +4,7 @@ import os
 from tensorflow.keras import layers, models, callbacks
 from sklearn.utils import class_weight
 import time
-
+import random
 
 ### MODES:
 train_model = 0
@@ -12,7 +12,8 @@ get_predictions_from_frames = 0
 test_model_from_frames = 1
 
 ### A parameter to tweak
-IMSIZE = (128, 128)
+IMSIZE = (224, 224) # No larger than 224x224 on PC
+epochs = 5
 
 def makeDatasetInMemory(class_folders,
                         in_path,
@@ -33,6 +34,14 @@ def makeDatasetInMemory(class_folders,
 
         images = np.array(images)
         labels = np.array(labels)
+
+        indices = np.arange(labels.shape[0])
+        np.random.shuffle(indices)
+
+        print(labels[1:10])
+        images = images[indices]
+        labels = labels[indices]
+        print(labels[1:10])
 
     else:
         images = []
@@ -57,7 +66,7 @@ def modelInit(IMSIZE=IMSIZE):
     model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.Flatten())
     model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(3, activation='softmax'))
+    model.add(layers.Dense(len(class_folders), activation='softmax'))
 
     # model.summary()
 
@@ -81,6 +90,19 @@ def pipelineSingleSample(i, IMSIZE=IMSIZE):
 
     return i
 
+def simulateVideo(in_path, IMSIZE = IMSIZE):
+    images = []
+
+    for f in os.listdir(in_path):
+        im = cv2.imread(in_path + f)
+        images.append(im)
+
+    images = np.array(images)
+    return images
+
+
+
+
 if train_model:
 
     class_folders = ["class1/", "class2/", "class3/"]
@@ -89,10 +111,18 @@ if train_model:
 
     # Some slight pre-processing
     train_images = pipeline(train_images)
+
+    # Since it's random keep the top bit for training
+    n = int(len(train_labels)*0.3)
+    val_images = train_images[:n]
+    val_labels = train_labels[:n]
+
+
     class_weights = class_weight.compute_sample_weight('balanced', train_labels)
 
     model = modelInit()
-    model.fit(train_images, train_labels, epochs=5, class_weight = class_weights)
+    model.fit(train_images, train_labels, epochs=epochs, class_weight = class_weights,
+              validation_data=(val_images, val_labels))
     model.save('cnn_1.h5')
 
 if get_predictions_from_frames:
@@ -115,21 +145,37 @@ if test_model_from_frames:
     print("Model loaded")
     test_dir = "test/raw_images/"
 
-    for f in os.listdir(test_dir):
+    images = simulateVideo("test/raw_images/")
 
-        st1 = time.time()
-        im_color = cv2.imread(test_dir + f)
-        im = cv2.imread(test_dir + f, 0)
-        im = pipelineSingleSample(im, IMSIZE)
+    for im_color in images:
         st2 = time.time()
+        im = cv2.cvtColor(im_color, cv2.COLOR_BGR2GRAY)
+        im = pipelineSingleSample(im, IMSIZE)
         predictions = m.predict(im)
-        print(time.time() - st2)
         class_pred = str(np.argmax(predictions) + 1)
-
-
         im_color = cv2.putText(im_color, "class: " + class_pred, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
         cv2.imshow("", im_color)
         cv2.waitKey(32)
-        print(time.time() - st1, "\n\n")
+
+        print(time.time() - st2)
+
+
+    # for f in os.listdir(test_dir):
+    #
+    #     st1 = time.time()
+    #     im_color = cv2.imread(test_dir + f)
+    #     im = cv2.cvtColor(im_color, cv2.COLOR_BGR2GRAY)
+    #     im = pipelineSingleSample(im, IMSIZE)
+    #     print(time.time() - st1, "\n\n")
+    #     st2 = time.time()
+    #     predictions = m.predict(im)
+    #     print(time.time() - st2)
+    #     class_pred = str(np.argmax(predictions) + 1)
+    #
+    #
+    #     im_color = cv2.putText(im_color, "class: " + class_pred, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    #
+    #     cv2.imshow("", im_color)
+    #     cv2.waitKey(32)
+
 
