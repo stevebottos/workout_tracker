@@ -134,7 +134,7 @@ if get_predictions_from_frames:
 
     predictions = m.predict(test_images)
     print(predictions)
-    np.savetxt('../predictions.csv', predictions, delimiter = ',')
+    np.savetxt('../output/predictions.csv', predictions, delimiter = ',')
 
 if test_model_from_frames:
 
