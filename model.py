@@ -3,50 +3,70 @@ import cv2
 import os
 from tensorflow.keras import layers, models, callbacks
 from sklearn.utils import class_weight
+import time
+import random
 
+### MODES:
+train_model = 0
+get_predictions_from_frames = 0
+test_model_from_frames = 1
+
+### A parameter to tweak
+IMSIZE = (224, 224) # No larger than 224x224 on PC
+epochs = 5
 
 def makeDatasetInMemory(class_folders,
-                        in_path="train/"):
-    # Load in the train data
-    train_images = []
-    train_labels = []
-    # one_hot_encoder = np.zeros(len(class_folders))
+                        in_path,
+                        mode,
+                        IMSIZE = IMSIZE):
+    images = []
+    labels = []
 
-    for c in class_folders:
-        class_label_indexer = int(c[5])-1  # TODO: Make this more robust, will break if double digits
-        print("loading class", class_label_indexer)
-        for f in os.listdir(in_path + c):
-            im = cv2.imread(in_path + c + f, 0)
-            im = cv2.resize(im, (220, 220))
-            train_images.append(im)
+    if mode == "train":
+        for c in class_folders:
+            class_label_indexer = int(c[5])-1  # TODO: Make this more robust, will break if double digits
+            print("loading class", class_label_indexer)
+            for f in os.listdir(in_path + c):
+                im = cv2.imread(in_path + c + f, 0)
+                im = cv2.resize(im, IMSIZE)
+                images.append(im)
+                labels.append(class_label_indexer)
 
-            # Don't think I need to one-hot encode, TF docs say to pass index of class not multi-class
-            # vector labels
-            # label = np.copy(one_hot_encoder)
-            # label[class_label_indexer] = 1
-            # train_labels.append(label)
+        images = np.array(images)
+        labels = np.array(labels)
 
-            train_labels.append(class_label_indexer)
+        indices = np.arange(labels.shape[0])
+        np.random.shuffle(indices)
 
-    train_images = np.array(train_images)
-    train_labels = np.array(train_labels)
+        print(labels[1:10])
+        images = images[indices]
+        labels = labels[indices]
+        print(labels[1:10])
 
-    train_images = train_images / 255  # Normalize
+    else:
+        images = []
+        for f in os.listdir(in_path):
+            im = cv2.imread(in_path + f, 0)
+            im = cv2.resize(im, IMSIZE)
+            images.append(im)
 
-    #TODO: Shuffle these two boys together to maintain indices
-    return train_images, train_labels
+        images = np.array(images)
 
-def modelInit():
+    # TODO: Shuffle these two boys together to maintain indices
+    return labels, images
+
+
+def modelInit(IMSIZE=IMSIZE):
 
     model = models.Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(h, w, 1)))
+    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(IMSIZE[0], IMSIZE[1], 1)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.Flatten())
     model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(3, activation='softmax'))
+    model.add(layers.Dense(len(class_folders), activation='softmax'))
 
     # model.summary()
 
@@ -55,51 +75,61 @@ def modelInit():
                   metrics=['accuracy'])
     return model
 
-def pipeline(dataset):
+def pipeline(dataset, IMSIZE=IMSIZE):
     dataset = np.array(dataset)
     dataset = dataset / 255  # Normalize
-    h, w = dataset[0].shape
     n = len(dataset)
-    dataset = dataset.reshape(n, h, w, 1)
+    dataset = dataset.reshape(n, IMSIZE[0], IMSIZE[1], 1)
 
     return dataset
 
-### MODES:
-train_model = 0
-get_predictions = 1
-test_model = 0
+def pipelineSingleSample(i, IMSIZE=IMSIZE):
+    i = cv2.resize(i, IMSIZE)
+    i = i / 255  # Normalize
+    i = i.reshape(1, IMSIZE[0], IMSIZE[1], 1)
+
+    return i
+
+def simulateVideo(in_path, IMSIZE = IMSIZE):
+    images = []
+
+    for f in os.listdir(in_path):
+        im = cv2.imread(in_path + f)
+        images.append(im)
+
+    images = np.array(images)
+    return images
+
+
+
 
 if train_model:
 
     class_folders = ["class1/", "class2/", "class3/"]
-    train_labels, train_images = makeDatasetInMemory(class_folders)
+    train_labels, train_images = makeDatasetInMemory(class_folders, "train/", mode="train")
+    print(train_images.shape)
 
     # Some slight pre-processing
     train_images = pipeline(train_images)
+
+    # Since it's random keep the top bit for training
+
+    # n = int(len(train_labels)*0.3)
+    # val_images = train_images[:n]
+    # val_labels = train_labels[:n]
+
+
     class_weights = class_weight.compute_sample_weight('balanced', train_labels)
 
     model = modelInit()
-    model.fit(train_images, train_labels, epochs=4, class_weight = class_weights)
+    model.fit(train_images, train_labels, epochs=epochs, class_weight = class_weights)#, validation_data=(val_images, val_labels))
     model.save('cnn_1.h5')
 
-if get_predictions:
+if get_predictions_from_frames:
     m = models.load_model("cnn_1.h5")
 
     # Load in some test data
-    test_images = []
-    test_dir = "test/raw_images/"
-
-    cnt = 1
-    # lim = 500
-    for f in os.listdir(test_dir):
-        print(test_dir+f)
-        im = cv2.imread(test_dir + f, 0)
-        im = cv2.resize(im, (220, 220))
-        test_images.append(im)
-
-        # if cnt == lim:
-        #     break
-        cnt += 1
+    _, test_images = makeDatasetInMemory("", "test/raw_images/", "test")
 
     test_images = pipeline(test_images)
 
@@ -108,23 +138,76 @@ if get_predictions:
     # predictions = np.argmax(predictions, 1).T
     np.savetxt('predictions.csv', predictions, delimiter = ',')
 
-if test_model:
-    test_images = []
+if test_model_from_frames:
 
-    dirr = "/home/steve/Qimia Inc Dropbox/Steve Bottos/color_top/images"
-    labels = np.genfromtxt('predictions.csv')
+    print("Loading model")
+    m = models.load_model("cnn_1.h5")
+    print("Model loaded")
+    test_dir = "test/raw_images/"
 
-    pos = 0
-    for f in os.listdir(dirr):
-        if labels[pos] == 1:
-            print(pos)
-            im = cv2.imread(dirr + '/' + f)
-            im = cv2.resize(im, None, fx=0.2, fy=0.2)
-            cv2.imwrite("1_test/" + f, im)
-        # else:
-        #     print(pos)
-        #     im = cv2.imread(dirr + '/' + f)
-        #     im = cv2.resize(im, None, fx=0.2, fy=0.2)
-        #     cv2.imwrite("0_test/" + f, im)
+    counter = 0
+    state = ""
+    annotation = ""
+    for f in os.listdir(test_dir):
 
-        pos += 1
+        st1 = time.time()
+        im_color = cv2.imread(test_dir + f)
+        im = cv2.cvtColor(im_color, cv2.COLOR_BGR2GRAY)
+        im = pipelineSingleSample(im, IMSIZE)
+        print(time.time() - st1, "\n\n")
+        st2 = time.time()
+        predictions = m.predict(im)
+        print(predictions)
+        top = predictions[:,0]
+        bottom = predictions[:,1]
+
+        thresh = 0.5
+
+        # State logic 
+        if top > thresh and bottom > thresh:
+            current = ""
+        elif top > thresh:
+            current = "T"
+            annotation = "Top of movement"
+        elif bottom > thresh:
+            current = "B"
+            annotation = "Bottom of movement"
+        else:
+            current = ""
+            annotation = "Transitioning"
+
+        if (state == "B" or state == "TB") and current == "T":
+            state = "T"
+            counter += 1
+        else:
+            state += current if current not in state else ""
+
+        # Format img
+        print(time.time() - st2)
+        class_pred = str(np.argmax(predictions) + 1)
+
+        im_color = cv2.resize(im_color, (640*2, 480*2), interpolation = cv2.INTER_AREA)
+
+        im_color = cv2.putText(im_color, "CNN Prediction: " + annotation, (10, 70),
+                               cv2.FONT_HERSHEY_SIMPLEX, 2,
+                               (255, 255, 255), thickness = 10)
+
+        im_color = cv2.putText(im_color, "CNN Prediction: " + annotation, (10, 70),
+                               cv2.FONT_HERSHEY_SIMPLEX, 2,
+                               (0, 0, 255), thickness = 3)
+
+        im_color = cv2.putText(im_color, "Pushups completed: " + str(counter), (10, 170),
+                               cv2.FONT_HERSHEY_SIMPLEX, 3,
+                               (255, 255, 255), thickness=10)
+
+        im_color = cv2.putText(im_color, "Pushups completed: " + str(counter), (10, 170),
+                               cv2.FONT_HERSHEY_SIMPLEX, 3,
+                               (0, 0, 255), 3)
+
+
+        cv2.imshow("", im_color)
+        cv2.moveWindow("", 20, 20);
+
+        cv2.waitKey(32)
+
+
