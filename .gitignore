@@ -1,8 +1,8 @@
-train/
-unsorted_images/
-test/
 .idea/
 *.png
+*.zip
+*.mov
+*.mp4
 *.h5
 predictions.csv
-.DS_Store/
+*.DS_Store/
