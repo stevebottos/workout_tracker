@@ -5,4 +5,5 @@
 *.mp4
 *.h5
 predictions.csv
-*.DS_Store/
+*DS_Store/
+.ipynb_checkpoints/
