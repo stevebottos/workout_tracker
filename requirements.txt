@@ -30,7 +30,7 @@ protobuf==3.11.4
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser==2.20
-PyJWT==1.7.1
+PyJWT==2.4.0
 pyOpenSSL==19.1.0
 pyreadline==2.1
 PySocks==1.7.1
